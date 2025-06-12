@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pizza Delivery Game</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<h1>🍕 Pizza Delivery Game</h1>
+<div class="flex-container">
+<div class="left-column">
+  <canvas id="gameCanvas" width="870" height="630"></canvas>
+</div>
+<div class="right-column">
+  <label for="difficulty">Складність:</label>
+  <select id="difficulty">
+    <option value="easy">Легко</option>
+    <option value="normal">Нормально</option>
+    <option value="hard">Складно (з погодою)</option>
+  </select>
+  <button onclick="startGame()">Старт</button>
+  <div id="walletDisplay">Гаманець: 0 ₴</div>
+  <div id="weather-indicator" class="weather-indicator">☀️ Sunny</div>
+  <div id="fuel-container" class="fuel-container">
+    <label for="fuel-bar">Fuel</label>
+    <progress id="fuel-bar" class="fuel-bar" value="100" max="100"></progress>
+  </div>
+  <div id="mobile-controls">
+    <button data-key="ArrowUp" class="control up">↑</button>
+    <div class="horizontal-controls">
+      <button data-key="ArrowLeft" class="control left">←</button>
+      <button data-key="ArrowDown" class="control down">↓</button>
+      <button data-key="ArrowRight" class="control right">→</button>
+    </div>
+  </div>
+</div>
+
+<div id="messageArea" class="messageArea"></div>
+</div>
+
+<audio id="coinSound" src="sounds/coin-drop.mp3" preload="auto"></audio>
+<script src="game.js"></script>
+</body>
+</html>
