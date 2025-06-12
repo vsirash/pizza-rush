@@ -22,14 +22,14 @@ let pizzeria = { x: 0, y: 0 }; // координати піцерії
 let car = {x:1, y:1, fuel:100};
 const maxDeliveries = 5;
 let wallet = 0;
-let walletPosition = {x: canvas.width - 50, y: 30}; // позиція гаманця
+let walletPosition = {x: canvas.width, y: canvas.height/2}; // позиція гаманця
 const initialFuel = 100;
 
 function updateWalletDisplay() {
   walletDisplay.textContent = `Гаманець: ${wallet} ₴`;
 }
 
-function drawWallet() {
+/*function drawWallet() {
   ctx.fillStyle = "gold";
   ctx.beginPath();
   ctx.arc(walletPosition.x, walletPosition.y, 15, 0, Math.PI*2);
@@ -37,7 +37,7 @@ function drawWallet() {
   ctx.fillStyle = "black";
   ctx.font = "16px sans-serif";
   ctx.fillText(`💰 ${wallet}`, walletPosition.x + 20, walletPosition.y + 5);
-}
+}*/
 
 function findNearest(position, objectType) {
   if(map[position.y][position.x-1] >= objectType) {
@@ -300,23 +300,26 @@ function drawHouses() {
       ctx.fillStyle = "gray"; // Звичайний будинок
     }
     ctx.fillRect(h.x*tileSize+5, h.y*tileSize+5, tileSize-10, tileSize-10);
+    ctx.font = "18px sans-serif";
+    ctx.fillText("🏠", h.x*tileSize, h.y*tileSize+20);
   });
 }
 
 function drawFuelStations() {
   fuelStations.forEach(f => {
     ctx.fillStyle = "orange";
-    ctx.beginPath();
-    ctx.arc(f.x*tileSize + tileSize/2, f.y*tileSize + tileSize/2, tileSize/4, 0, Math.PI*2);
-    ctx.fill();
+    ctx.font = "18px sans-serif";
+    ctx.fillText("⛽",f.x*tileSize, f.y*tileSize+20);
   });
 }
 
 function drawCar() {
   ctx.fillStyle = "red";
-  ctx.beginPath();
+  ctx.font = "24px sans-serif";
+  ctx.fillText("🚙", car.x*tileSize, car.y*tileSize + 20);
+  /*ctx.beginPath();
   ctx.arc(car.x*tileSize + tileSize/2, car.y*tileSize + tileSize/2, tileSize/3, 0, Math.PI*2);
-  ctx.fill();
+  ctx.fill();*/
 }
 
 function updateFuelBar() {
@@ -351,7 +354,7 @@ function update() {
 
   updateFuelBar();
   updateWalletDisplay();
-  drawWallet();
+  //drawWallet();
 }
 
 

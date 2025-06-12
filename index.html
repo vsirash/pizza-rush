@@ -12,6 +12,7 @@
   <canvas id="gameCanvas" width="870" height="630"></canvas>
 </div>
 <div class="right-column">
+  <div class="settings">
   <label for="difficulty">Складність:</label>
   <select id="difficulty">
     <option value="easy">Легко</option>
@@ -19,11 +20,20 @@
     <option value="hard">Складно (з погодою)</option>
   </select>
   <button onclick="startGame()">Старт</button>
-  <div id="walletDisplay">Гаманець: 0 ₴</div>
-  <div id="weather-indicator" class="weather-indicator">☀️ Sunny</div>
-  <div id="fuel-container" class="fuel-container">
-    <label for="fuel-bar">Fuel</label>
-    <progress id="fuel-bar" class="fuel-bar" value="100" max="100"></progress>
+  </div>
+  <div style="display: flex;">
+    <div style="padding: 30px;width: 150px">
+      <div id="walletDisplay" class="weather-indicator">Гаманець: 0 ₴</div>
+    </div>
+    <div style="padding: 30px;;width: 150px">
+      <div id="weather-indicator" class="weather-indicator">☀️ Sunny</div>
+    </div>
+    <div style="padding: 30px;;width: 250px">
+      <div id="fuel-container" class="fuel-container weather-indicator">
+        <label for="fuel-bar">Fuel</label>
+        <progress id="fuel-bar" class="fuel-bar" value="100" max="100"></progress>
+      </div>
+    </div>
   </div>
   <div id="mobile-controls">
     <button data-key="ArrowUp" class="control up">↑</button>
