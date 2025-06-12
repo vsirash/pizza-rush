@@ -1,6 +1,6 @@
 const canvas = document.getElementById("gameCanvas");
+const fuelBar = document.getElementById("fuel-bar");
 const ctx = canvas.getContext("2d");
-//const fuelDisplay = document.getElementById("fuelDisplay");
 const walletDisplay = document.getElementById("walletDisplay"); // <== додай цей елемент
 
 const mapWidth = 29; // Краще непарне число для лабіринту (21x21)
@@ -9,14 +9,17 @@ const tileSize = 30;
 const maxHouses = 40;
 const settings = {
   weatherEnabled: false,
-  economyCoefficient: 1
+  economyCoefficient: 1,
+  enemyCount: 0
 }
+
+let gameRunning = true;
 let weatherType = null; // "rain", "fog", etc.
 let map = [];
 let houses = [];
 let deliveryHouses = [];
 let fuelStations = [];
-let coinAnimations = []; // монетки в польоті\
+let coinAnimations = []; // монетки в польоті
 let rainParticles = [];
 let pizzeria = { x: 0, y: 0 }; // координати піцерії
 let car = {x:1, y:1, fuel:100};
@@ -24,20 +27,14 @@ const maxDeliveries = 5;
 let wallet = 0;
 let walletPosition = {x: canvas.width, y: canvas.height/2}; // позиція гаманця
 const initialFuel = 100;
+fuelBar.max = initialFuel*settings.economyCoefficient;
+let gasPrice = 0.5;
+
+let enemyCars = [];
 
 function updateWalletDisplay() {
   walletDisplay.textContent = `Гаманець: ${wallet} ₴`;
 }
-
-/*function drawWallet() {
-  ctx.fillStyle = "gold";
-  ctx.beginPath();
-  ctx.arc(walletPosition.x, walletPosition.y, 15, 0, Math.PI*2);
-  ctx.fill();
-  ctx.fillStyle = "black";
-  ctx.font = "16px sans-serif";
-  ctx.fillText(`💰 ${wallet}`, walletPosition.x + 20, walletPosition.y + 5);
-}*/
 
 function findNearest(position, objectType) {
   if(map[position.y][position.x-1] >= objectType) {
@@ -88,42 +85,27 @@ function showMessage(text, duration = 2000) {
   }, duration);
 }
 
-function drawCoinAnimations() {
-  for (let i = coinAnimations.length - 1; i >= 0; i--) {
-    let c = coinAnimations[i];
-    ctx.fillStyle = "gold";
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    c.x += c.vx;
-    c.y += c.vy;
-    c.life--;
-    if (c.life <= 0) coinAnimations.splice(i, 1);
-  }
-}
-
-
 function createCityGrid() {
-map = [];
-for(let y=0; y<mapHeight; y++) {
-  let row = [];
-  for(let x=0; x<mapWidth; x++) {
-    // Вулиці кожні 4 клітинки (0,4,8,12,16,20)
-    if (y % 4 === 0 || x % 4 === 0) {
-      row.push(0); // дорога
-    } else {
-      let r = Math.random();
-      if (r < 0.2) {
-        row.push(2); // дерево
-      } else if (r < 0.3) {
-        row.push(3); // кущ
+  map = [];
+  for(let y=0; y<mapHeight; y++) {
+    let row = [];
+    for(let x=0; x<mapWidth; x++) {
+      // Вулиці кожні 4 клітинки (0,4,8,12,16,20)
+      if (y % 4 === 0 || x % 4 === 0) {
+        row.push(0); // дорога
       } else {
-        row.push(1); // трава
+        let r = Math.random();
+        if (r < 0.2) {
+          row.push(2); // дерево
+        } else if (r < 0.3) {
+          row.push(3); // кущ
+        } else {
+          row.push(1); // трава
+        }
       }
     }
+    map.push(row);
   }
-  map.push(row);
-}
 }
 
 function shuffle(array) {
@@ -189,155 +171,15 @@ function getRoadPositions() {
   return positions;
 }
 
-function drawRain() {
-  ctx.strokeStyle = "rgba(173,216,230,0.5)";
-  ctx.lineWidth = 1;
-  rainParticles.forEach(p => {
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-    ctx.lineTo(p.x + 2, p.y + p.length);
-    ctx.stroke();
-
-    p.y += p.speed;
-    if (p.y > canvas.height) {
-      p.y = -10;
-      p.x = Math.random() * canvas.width;
-    }
-  });
-}
-
-function drawFog() {
-  ctx.fillStyle = "rgba(200,200,200,0.9)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function drawMap() {
-  for (let y = 0; y < mapHeight; y++) {
-    for (let x = 0; x < mapWidth; x++) {
-      let tile = map[y][x];
-
-      // Малюємо фон дороги або трави
-      if (tile === 0) {
-        ctx.fillStyle = "black"; // дорога
-        if(weatherType === "rain") {
-          ctx.fillStyle = "#064d89"; // дорога
-        } else if (weatherType === "ice") {
-          ctx.fillStyle = "#c0e7eb";
-        }
-      } else {
-        ctx.fillStyle = "green"; // трава
-      }
-      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-
-      // Якщо дорога — малюємо переривчасту розмітку
-      // Якщо дорога — малюємо переривчасту розмітку
-      if (tile === 0) {
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-
-        // Горизонтальна розмітка
-        if ((x > 0 && map[y][x - 1] === 0) && (x < mapWidth - 1 && map[y][x + 1] === 0)) {
-          for (let i = 0; i < tileSize; i += 16) {
-            ctx.moveTo(x * tileSize + i, y * tileSize + tileSize / 2);
-            ctx.lineTo(x * tileSize + i + 4, y * tileSize + tileSize / 2);
-          }
-        }
-
-        // Вертикальна розмітка
-        if ((y > 0 && map[y - 1][x] === 0) && (y < mapHeight - 1 && map[y + 1][x] === 0)) {
-          for (let i = 0; i < tileSize; i += 16) {
-            ctx.moveTo(x * tileSize + tileSize / 2, y * tileSize + i);
-            ctx.lineTo(x * tileSize + tileSize / 2, y * tileSize + i + 4);
-          }
-        }
-
-        // Додаємо розмітку перехрестя
-        let up = y > 0 && map[y - 1][x] === 0;
-        let down = y < mapHeight - 1 && map[y + 1][x] === 0;
-        let left = x > 0 && map[y][x - 1] === 0;
-        let right = x < mapWidth - 1 && map[y][x + 1] === 0;
-        let roadConnections = [up, down, left, right].filter(Boolean).length;
-
-        if (roadConnections >= 3) {
-          ctx.fillStyle = "white";
-          ctx.beginPath();
-          //ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 4, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-
-        ctx.stroke();
-      }
-
-      if (tile === 1) {
-        ctx.fillStyle = "darkgreen"; // трава
-        ctx.fillRect(x * tileSize + 5, y * tileSize + 5, tileSize - 5, tileSize - 5);
-      } else if (tile === 2) {
-        ctx.fillStyle = "green"; // дерево
-        ctx.fillRect(x * tileSize + 5, y * tileSize + 5, tileSize - 5, tileSize - 5);
-      } else if (tile === 3) {
-        ctx.fillStyle = "#567d46"; // кущ
-        ctx.fillRect(x * tileSize + 5, y * tileSize + 5, tileSize - 5, tileSize - 5);
-      } else if (tile === 5) {
-        ctx.fillStyle = "maroon";
-        ctx.fillRect(pizzeria.x * tileSize + 4, pizzeria.y * tileSize + 4, tileSize - 8, tileSize - 8);
-        ctx.fillStyle = "white";
-        ctx.font = "12px sans-serif";
-        ctx.fillText("🍕", pizzeria.x * tileSize + 8, pizzeria.y * tileSize + 22);
-      }
-    }
-  }
-}
-
-function drawHouses() {
-  houses.forEach(h => {
-    let isDelivery = deliveryHouses.some(dh => dh.x === h.x && dh.y === h.y);
-    if (h.delivered) {
-      ctx.fillStyle = "gray"; // Доставлено
-    } else if (isDelivery) {
-      ctx.fillStyle = "blue"; // Ще треба доставити
-    } else {
-      ctx.fillStyle = "gray"; // Звичайний будинок
-    }
-    ctx.fillRect(h.x*tileSize+5, h.y*tileSize+5, tileSize-10, tileSize-10);
-    ctx.font = "18px sans-serif";
-    ctx.fillText("🏠", h.x*tileSize, h.y*tileSize+20);
-  });
-}
-
-function drawFuelStations() {
-  fuelStations.forEach(f => {
-    ctx.fillStyle = "orange";
-    ctx.font = "18px sans-serif";
-    ctx.fillText("⛽",f.x*tileSize, f.y*tileSize+20);
-  });
-}
-
-function drawCar() {
-  ctx.fillStyle = "red";
-  ctx.font = "24px sans-serif";
-  ctx.fillText("🚙", car.x*tileSize, car.y*tileSize + 20);
-  /*ctx.beginPath();
-  ctx.arc(car.x*tileSize + tileSize/2, car.y*tileSize + tileSize/2, tileSize/3, 0, Math.PI*2);
-  ctx.fill();*/
-}
-
 function updateFuelBar() {
-  const fuelBar = document.getElementById("fuel-bar");
   if(!fuelBar) return;
   fuelBar.value = car.fuel;
-  fuelBar.max = initialFuel*settings.economyCoefficient;
 
   // Optional: змінити колір при низькому рівні
   const value =  fuelBar.value / fuelBar.max;
   fuelBar.style.setProperty('--fuel-color', value < 0.3 ? 'red' : 'limegreen');
 }
-
-function clearCanvas() {
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
+let lastEnemyMove=0;
 function update() {
   clearCanvas();
   drawMap();
@@ -345,6 +187,7 @@ function update() {
   drawFuelStations();
   drawCar();
   drawCoinAnimations();
+  drawEnemyCars();
 
   if (settings.weatherEnabled && weatherType === "rain") {
     drawRain();
@@ -354,7 +197,14 @@ function update() {
 
   updateFuelBar();
   updateWalletDisplay();
-  //drawWallet();
+  if(lastEnemyMove > 100) {
+    lastEnemyMove = 0;
+    moveEnemyCars();
+    checkCollisionWithEnemies();
+  } else {
+    lastEnemyMove++;
+  }
+
 }
 
 
@@ -386,14 +236,17 @@ function checkDelivery() {
 function checkFuelStation() {
   for(let f of fuelStations) {
     if(car.x === f.x && car.y === f.y) {
-      car.fuel = initialFuel * settings.economyCoefficient;
+      const fuelToRefill = initialFuel * settings.economyCoefficient - car.fuel;
+      car.fuel += fuelToRefill;
+      wallet -= (fuelToRefill * gasPrice);
       showMessage("⛽ Заправка повна!", 2000);
     }
   }
 }
-
+let eventHandler = null;
 document.addEventListener("keydown", e => {
-  if(car.fuel <= 0) return;
+  eventHandler = this;
+  if(car.fuel <= 0 || !gameRunning) return;
 
   if (settings.weatherEnabled) {
     let slipCoefficient = 0;
@@ -428,6 +281,20 @@ document.addEventListener("keydown", e => {
   }
   update();
 });
+
+
+function checkCollisionWithEnemies() {
+  for (let e of enemyCars) {
+    if (e.x === car.x && e.y === car.y) {
+      showMessage("💥 Аварія! Гра закінчена!");
+      // Можна заблокувати керування:
+      gameRunning = false;
+      return true;
+    }
+  }
+  return false;
+}
+
 
 document.querySelectorAll('#mobile-controls button').forEach(button => {
   const triggerKeydown = () => {
@@ -477,24 +344,18 @@ function init() {
 
   chooseDeliveryHouses();
   placeFuelStations();
+
+  spawnEnemyCars();
+
   update();
 }
 
 function gameLoop() {
+  if(!gameRunning) {
+    return;
+  }
   update(); // оновлюємо графіку
   requestAnimationFrame(gameLoop); // викликаємо наступний кадр
-}
-
-function initRain() {
-  rainParticles = [];
-  for (let i = 0; i < 100; i++) {
-    rainParticles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      length: 10,
-      speed: 4 + Math.random() * 2
-    });
-  }
 }
 
 function updateWeatherIndicator() {
@@ -524,15 +385,18 @@ function startGame() {
   const difficulty = document.getElementById("difficulty").value;
   rainParticles = [];
   settings.weatherEnabled = false;
+  settings.enemyCount = 0;
   weatherType = null;
   wallet = 0;
   if(difficulty === 'easy') {
     settings.economyCoefficient = 2;
   } else if (difficulty === 'normal') {
     settings.economyCoefficient = 1;
+    settings.enemyCount = 1;
   } else if (difficulty === "hard") {
     settings.economyCoefficient = 0.5;
     settings.weatherEnabled = true;
+    settings.enemyCount = 2;
     const types = ["rain", "fog", "ice"];
     weatherType = types[Math.floor(Math.random() * types.length)];
     initRain();
@@ -541,9 +405,11 @@ function startGame() {
   updateWeatherIndicator();
   car.fuel = initialFuel * settings.economyCoefficient;
   init(); // запускає гру
+  gameRunning = true;
+  gameLoop();
 
 }
 
 init();
-gameLoop();
+
 
