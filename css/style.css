@@ -8,8 +8,8 @@ body {
 canvas {
   border: 2px solid #000;
   background: #d0f0c0;
-  //position: absolute;
-  left: 5%;
+  max-width: 100%;
+  height: auto;
 }
 
 .fuel-container {
@@ -127,4 +127,44 @@ canvas {
 
 .settings {
   padding: 50px;
+}
+@media screen and (max-width: 768px) {
+  .flex-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .left-column, .right-column {
+    width: 100%;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .settings {
+    padding: 20px;
+  }
+
+  #mobile-controls {
+    padding-top: 20px;
+    height: auto;
+  }
+
+  .control {
+    width: 22%;
+    height: 60px;
+    font-size: 20px;
+  }
+
+  .horizontal-controls {
+    justify-content: space-around;
+  }
+
+  .weather-indicator,
+  .fuel-container {
+    font-size: 14px;
+    padding: 8px;
+  }
 }
