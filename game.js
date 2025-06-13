@@ -1,7 +1,7 @@
-const canvas = document.getElementById("gameCanvas");
-const fuelBar = document.getElementById("fuel-bar");
-const ctx = canvas.getContext("2d");
-const walletDisplay = document.getElementById("walletDisplay"); // <== додай цей елемент
+const canvas = document.getElementById('gameCanvas');
+const fuelBar = document.getElementById('fuel-bar');
+const ctx = canvas.getContext('2d');
+const walletDisplay = document.getElementById('walletDisplay'); // <== додай цей елемент
 
 const mapWidth = 29; // Краще непарне число для лабіринту (21x21)
 const mapHeight = 21; // Краще непарне число для лабіринту (21x21)
@@ -13,8 +13,10 @@ const settings = {
   enemyCount: 0
 }
 
-let gameRunning = true;
-let weatherType = null; // "rain", "fog", etc.
+const pizzaObject = {name:'pizza', symbol:'🍕'};
+
+let gameRunning = false;
+let weatherType = null; // 'rain', 'fog', etc.
 let map = [];
 let houses = [];
 let deliveryHouses = [];
@@ -22,7 +24,7 @@ let fuelStations = [];
 let coinAnimations = []; // монетки в польоті
 let rainParticles = [];
 let pizzeria = { x: 0, y: 0 }; // координати піцерії
-let car = {x:1, y:1, fuel:100};
+let car = {x:1, y:1, fuel:100, maxCargo:5, cargo:[]};
 const maxDeliveries = 5;
 let wallet = 0;
 let walletPosition = {x: canvas.width, y: canvas.height/2}; // позиція гаманця
@@ -34,6 +36,14 @@ let enemyCars = [];
 
 function updateWalletDisplay() {
   walletDisplay.textContent = `Гаманець: ${wallet} ₴`;
+}
+
+
+function addMoney(amount) {
+  wallet+=amount;
+}
+function deductMoney(amount) {
+  wallet-=amount;
 }
 
 function findNearest(position, objectType) {
@@ -77,11 +87,11 @@ function spawnCoin(tileX, tileY) {
 }
 
 function showMessage(text, duration = 2000) {
-  const el = document.getElementById("messageArea");
+  const el = document.getElementById('messageArea');
   el.textContent = text;
-  el.style.display = "block";
+  el.style.display = 'block';
   setTimeout(() => {
-    el.style.display = "none";
+    el.style.display = 'none';
   }, duration);
 }
 
@@ -142,13 +152,10 @@ function placeHouses() {
   }
 }
 
-function chooseDeliveryHouses() {
-  deliveryHouses = [];
+function chooseDeliveryHouse() {
   let copy = [...houses];
   shuffle(copy);
-  for(let i= 0; i<maxDeliveries && i<copy.length; i++) {
-    deliveryHouses.push(copy[i]);
-  }
+  return copy[Math.round(Math.random() * copy.length)];
 }
 
 function placeFuelStations() {
@@ -189,9 +196,9 @@ function update() {
   drawCoinAnimations();
   drawEnemyCars();
 
-  if (settings.weatherEnabled && weatherType === "rain") {
+  if (settings.weatherEnabled && weatherType === 'rain') {
     drawRain();
-  } else if (settings.weatherEnabled && weatherType === "fog") {
+  } else if (settings.weatherEnabled && weatherType === 'fog') {
     drawFog(); // тепер буде лише один шар туману
   }
 
@@ -200,10 +207,10 @@ function update() {
   if(lastEnemyMove > 100) {
     lastEnemyMove = 0;
     moveEnemyCars();
-    checkCollisionWithEnemies();
   } else {
     lastEnemyMove++;
   }
+  checkCollisionWithEnemies();
 
 }
 
@@ -222,42 +229,81 @@ function checkDelivery() {
   let house = findHouseNearby(car);
   if(house != null) {
     house.delivered = true;
-    wallet += 10 * settings.economyCoefficient;
+    addMoney(10 * settings.economyCoefficient);
+    car.cargo.pop();
     spawnCoin(house.x, house.y);
-    document.getElementById("coinSound").play(); // <== звук монетки
-    showMessage("🍕 Доставка виконана!", 2000);
+    document.getElementById('coinSound').play(); // <== звук монетки
+    showMessage('🍕 Доставка виконана!', 2000);
     // Вібрація на 50 мс, якщо підтримується
     if (navigator.vibrate) {
-      navigator.vibrate(50);
+      navigator.vibrate(500);
     }
   }
+}
+
+function checkPizzeria() {
+  return Math.abs(pizzeria.x - car.x) <= 1 && Math.abs(pizzeria.y - car.y) <= 1;
 }
 
 function checkFuelStation() {
   for(let f of fuelStations) {
     if(car.x === f.x && car.y === f.y) {
-      const fuelToRefill = initialFuel * settings.economyCoefficient - car.fuel;
+      let fuelToRefill = initialFuel * settings.economyCoefficient - car.fuel;
+      const moneyToPay = fuelToRefill * gasPrice;
+      if(moneyToPay > wallet) {
+        fuelToRefill = wallet * gasPrice;
+        deductMoney(wallet);
+        showMessage('⛽ Заправка на всі гроші!!!', 2000);
+      } else {
+        showMessage('⛽ Заправка повна!', 2000);
+      }
       car.fuel += fuelToRefill;
-      wallet -= (fuelToRefill * gasPrice);
-      showMessage("⛽ Заправка повна!", 2000);
+      deductMoney(fuelToRefill * gasPrice);
+
     }
   }
 }
-let eventHandler = null;
-document.addEventListener("keydown", e => {
-  eventHandler = this;
+
+function addPizza() {
+  for(let index= car.cargo.length; index < car.maxCargo; index++) {
+    car.cargo.push(pizzaObject);
+    deliveryHouses.push(chooseDeliveryHouse());
+  }
+}
+
+
+function doLoad() {
+  checkFuelStation();
+
+
+
+  if(checkPizzeria()) {
+    document.getElementById('carHorn').play();
+    addPizza();
+    console.log(car.cargo);
+  }
+}
+
+function doUnload() {
+  checkDelivery();
+  console.log(car.cargo);
+}
+
+
+document.addEventListener('keydown', e => {
+
   if(car.fuel <= 0 || !gameRunning) return;
 
   if (settings.weatherEnabled) {
     let slipCoefficient = 0;
     switch (weatherType) {
-      case "rain":
+      case 'rain':
         slipCoefficient = 0.1;
         break;
-      case "fog":
+      case 'fog':
         slipCoefficient = 0;
         break;
-      case "ice":
+      case 'ice':
         slipCoefficient = 0.3;
         break;
     }
@@ -267,17 +313,17 @@ document.addEventListener("keydown", e => {
   let newX = car.x;
   let newY = car.y;
 
-  if(e.key === "ArrowUp") newY--;
-  else if(e.key === "ArrowDown") newY++;
-  else if(e.key === "ArrowLeft") newX--;
-  else if(e.key === "ArrowRight") newX++;
+  if(e.key === 'ArrowUp') newY--;
+  else if(e.key === 'ArrowDown') newY++;
+  else if(e.key === 'ArrowLeft') newX--;
+  else if(e.key === 'ArrowRight') newX++;
+  else if(e.key === 'U' || e.key === 'u') doUnload();
+  else if(e.key === 'L' || e.key === 'l') doLoad();
 
   if(newX >= 0 && newY >= 0 && newX < mapWidth && newY < mapHeight && map[newY][newX] === 0) {
     car.x = newX;
     car.y = newY;
     car.fuel--;
-    checkDelivery();
-    checkFuelStation();
   }
   update();
 });
@@ -286,7 +332,7 @@ document.addEventListener("keydown", e => {
 function checkCollisionWithEnemies() {
   for (let e of enemyCars) {
     if (e.x === car.x && e.y === car.y) {
-      showMessage("💥 Аварія! Гра закінчена!");
+      showMessage('💥 Аварія! Гра закінчена!');
       // Можна заблокувати керування:
       gameRunning = false;
       return true;
@@ -342,7 +388,6 @@ function init() {
   map[pizzeria.y][pizzeriaCoords.x] = 5;
   placeHouses();
 
-  chooseDeliveryHouses();
   placeFuelStations();
 
   spawnEnemyCars();
@@ -359,22 +404,22 @@ function gameLoop() {
 }
 
 function updateWeatherIndicator() {
-  const el = document.getElementById("weather-indicator");
-  let emoji = "☀️";
-  let label = "Sunny";
+  const el = document.getElementById('weather-indicator');
+  let emoji = '☀️';
+  let label = 'Sunny';
 
   switch (weatherType) {
-    case "rain":
-      emoji = "🌧️";
-      label = "Rain";
+    case 'rain':
+      emoji = '🌧️';
+      label = 'Rain';
       break;
-    case "ice":
-      emoji = "❄️";
-      label = "Snow";
+    case 'ice':
+      emoji = '❄️';
+      label = 'Snow';
       break;
-    case "fog":
-      emoji = "🌫️";
-      label = "Fog";
+    case 'fog':
+      emoji = '🌫️';
+      label = 'Fog';
       break;
   }
 
@@ -382,29 +427,34 @@ function updateWeatherIndicator() {
 }
 
 function startGame() {
-  const difficulty = document.getElementById("difficulty").value;
+  const difficulty = document.getElementById('difficulty').value;
   rainParticles = [];
   settings.weatherEnabled = false;
   settings.enemyCount = 0;
   weatherType = null;
-  wallet = 0;
+  wallet = 0; //todo change to real wallet
   if(difficulty === 'easy') {
     settings.economyCoefficient = 2;
   } else if (difficulty === 'normal') {
     settings.economyCoefficient = 1;
     settings.enemyCount = 1;
-  } else if (difficulty === "hard") {
+  } else if (difficulty === 'hard') {
     settings.economyCoefficient = 0.5;
     settings.weatherEnabled = true;
     settings.enemyCount = 2;
-    const types = ["rain", "fog", "ice"];
+    const types = ['rain', 'fog', 'ice'];
     weatherType = types[Math.floor(Math.random() * types.length)];
     initRain();
   }
 
   updateWeatherIndicator();
   car.fuel = initialFuel * settings.economyCoefficient;
+  fuelBar.max = initialFuel*settings.economyCoefficient;
   init(); // запускає гру
+  deliveryHouses = [];
+  car.cargo = [];
+  addPizza();
+
   gameRunning = true;
   gameLoop();
 

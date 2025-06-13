@@ -1,5 +1,5 @@
 function drawRain() {
-  ctx.strokeStyle = "rgba(173,216,230,0.5)";
+  ctx.strokeStyle = 'rgba(173,216,230,0.5)';
   ctx.lineWidth = 1;
   rainParticles.forEach(p => {
     ctx.beginPath();
@@ -16,7 +16,7 @@ function drawRain() {
 }
 
 function drawFog() {
-  ctx.fillStyle = "rgba(200,200,200,0.9)";
+  ctx.fillStyle = 'rgba(200,200,200,0.9)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
