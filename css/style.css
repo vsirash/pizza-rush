@@ -128,6 +128,25 @@ canvas {
 .settings {
   padding: 50px;
 }
+
+
+button {
+  appearance: none;
+  border: 1px solid #8f8f8f;
+  width: 100px;
+  height: 50px;
+  border-radius: 6px;
+}
+
+button.blinking {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { background-color: #ff0000; }
+}
+
+
 @media screen and (max-width: 768px) {
   .flex-container {
     flex-direction: column;

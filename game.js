@@ -427,6 +427,7 @@ function updateWeatherIndicator() {
 }
 
 function startGame() {
+  document.getElementById("startButton").classList.remove("blinking");
   const difficulty = document.getElementById('difficulty').value;
   rainParticles = [];
   settings.weatherEnabled = false;
